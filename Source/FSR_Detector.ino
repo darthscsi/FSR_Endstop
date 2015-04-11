@@ -52,7 +52,7 @@
 //   0       1          0.85
 //   1       0          0.95
 //   1       1          0.92
-const float thresholds[] = { 0.80, 0.85, 0.95, 0.92 };
+const float thresholds[] = { 0.20, 0.15, 0.05, 0.08 };
 
 short fsrLeds[] = { LED1, LED2, LED3 };     // Pins for each of the LEDs next to the FSR inputs
 short fsrPins[] = { FSR1, FSR2, FSR3 };     // Pins for each of the FSR analog inputs
@@ -91,17 +91,17 @@ void SetOutput(short fsr, bool state)
 
     // For the end stop, we need to check the NC jumpper to see if we need to invert
     // the output.
-    int ncPin = digitalRead(NC_PIN);
-    if (ncPin == 1)
-    {
+//    int ncPin = digitalRead(NC_PIN);
+//    if (ncPin == 1)
+//    {
         // No jumper installed, so use Normally Closed
         digitalWrite(ENDSTOP, any ? LOW : HIGH);
-    }
-    else
-    {
-        // Jumper installed, so use Normally Open
-        digitalWrite(ENDSTOP, any ? HIGH: LOW);
-    }
+//    }
+//    else
+//    {
+//        // Jumper installed, so use Normally Open
+//        digitalWrite(ENDSTOP, any ? HIGH: LOW);
+//    }
 }
 
 void InitValues()
@@ -243,9 +243,16 @@ void CheckIfTriggered(short fsr)
 
     uint16_t longAverage = UpdateLongSamples(fsr, avg);
 
-    uint16_t threshold = GetThreshold() * longAverage;
+    float threshold = GetThreshold();
 
-    bool triggered = avg < threshold;
+    bool triggered;
+    
+    int ncPin = digitalRead(NC_PIN);
+    if (ncPin == 1) { // no jumper installed, normal sense
+      triggered = avg < longAverage - (uint16_t)(threshold * longAverage);
+    } else { // jumper installed, reverse sense
+      triggered = avg > longAverage + (uint16_t)(threshold * longAverage);
+    }
     SetOutput(fsr, triggered);
 }
 
